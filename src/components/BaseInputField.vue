@@ -41,6 +41,7 @@ export default {
   color: #888;
   transition: opacity 0.2s ease-in-out, filter 0.2s ease-in-out,
     box-shadow 0.1s ease-in-out;
+  overflow: hidden;
   &:hover {
     box-shadow: 0 14px 44px 0 rgba(0, 0, 0, 0.077);
   }
@@ -103,7 +104,7 @@ export default {
   .base-input-field {
     max-width: 100%;
     input {
-      top: 0px;
+      top: 7px;
       width: 90%;
     }
   }

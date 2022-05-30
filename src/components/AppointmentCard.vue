@@ -13,7 +13,7 @@
       />
     </div>
     <div class="buttons-wrapper">
-      <button class="btn" @click="fetchAppointments">Nos Services</button>
+      <button class="btn" @click="onAppointmentModal">Nos Services</button>
       <button class="btn" @click="onAppointmentModal">Prendre RDV</button>
     </div>
     <AppointmentModal
