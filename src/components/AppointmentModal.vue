@@ -52,6 +52,7 @@
             :class="{
               disabled: !name || !phoneNumber || seletedService === 'Choose a service'
             }"
+            :disabled="!name || !phoneNumber || seletedService === 'Choose a service'"
             v-if="showDetails"
             @click="nextHandler"
           >
