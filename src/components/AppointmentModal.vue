@@ -324,7 +324,7 @@ export default {
         }
       }
       .modal-body {
-        height: 450px;
+        height: 410px;
 
         @media screen and (max-width: 710px) {
           height: auto;
