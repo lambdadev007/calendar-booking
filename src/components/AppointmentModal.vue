@@ -183,7 +183,7 @@ export default {
       try {
         this.loading = true;
         const docRef = await addDoc(collection(db, "appointments"), {
-          choosen_services: this.seletedService,
+          seletedService: this.seletedService,
           name: this.name,
           phoneNumber: this.phoneNumber,
           date_time: this.dateTime,

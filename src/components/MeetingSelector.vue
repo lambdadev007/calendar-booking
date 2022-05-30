@@ -94,7 +94,6 @@ export default {
 
       if (this.services.length > 0 && this.seletedService !== '') {
         const service = this.services.find(service => service.name === this.seletedService);
-        console.log('[service]', service)
         duration = service.duration;
         bufferAfter = service.buffer;
       }
@@ -117,11 +116,16 @@ export default {
           const cursorDayAppointments = [];
 
           appointments.forEach((val) => {
-              const appointmentDate = moment(val.date_time, 'YYYY-MM-DD hh:mmA').format('YYYY-MM-DD');
-              const appointmentTime = moment(val.date_time, 'YYYY-MM-DD hh:mmA').format('hh:mmA');
-              if(date === appointmentDate) {
-                cursorDayAppointments.push({ time: appointmentTime, qty: 1 });
-              }
+            const service = this.services.find(service => service.name === val.seletedService)
+            const appointmentDate = moment(val.date_time, 'YYYY-MM-DD hh:mmA').format('YYYY-MM-DD');
+            const appointmentTime = moment(val.date_time, 'YYYY-MM-DD hh:mmA').format('hh:mmA');
+            if(date === appointmentDate) {
+              cursorDayAppointments.push({
+                time: appointmentTime,
+                qty: 1,
+                duration: parseInt(service.duration) + parseInt(service.buffer) 
+              });
+            }
           });
 
           let index = 0;
@@ -129,13 +133,22 @@ export default {
               const newStartTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from)
                                   .add( timeForSpot * index, 'minutes' );
               const newStartTime = newStartTimeObj.format('hh:mmA');
-              const newEndTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from)
-                                  .add( (timeForSpot * index + duration), 'minutes' ).format('hh:mmA')
+              const newStartTimesStamp = newStartTimeObj.unix();
+              const newEndTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from)
+                                  .add( (timeForSpot * index + duration), 'minutes' );
+              const newEndTime = newEndTimeObj.format('hh:mmA');
+
               let slots = parseInt(availability.slots);
 
               cursorDayAppointments.forEach((val) => {
-                if(val.time === newStartTime) {
-                  console.log('[dddff]')
+                const startTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD hh:mmA');
+                const startTimeStamp = startTimeObj.unix();
+                const endTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD hh:mmA')
+                                  .add( val.duration, 'minutes' );
+                const endTimeStamp = endTimeObj.unix();
+                
+                if(newStartTimesStamp >= startTimeStamp && newStartTimesStamp < endTimeStamp) {
+                  console.log('[BBBB]', val.time, newStartTime);
                   slots = slots - parseInt(val.qty);
                 }
               });
