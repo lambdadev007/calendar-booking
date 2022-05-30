@@ -17,7 +17,7 @@
             </button>
           </div>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" ref="modalbody">
           <MeetingDetail
             :nameProp="name"
             :phoneNumberProp="phoneNumber"
@@ -203,7 +203,9 @@ export default {
       const bodyWidth = window.innerWidth;
       if (val) {
         this.title = this.titles[2];
-        if (bodyWidth > 710) this.$refs.modal.style.width = '650px';
+        if (bodyWidth > 710) {
+          this.$refs.modal.style.width = '650px';
+        }
       }
       else {
         this.title = this.showDetails ? this.titles[0] : this.titles[1];
@@ -227,6 +229,15 @@ export default {
       }
       else {
         this.title = this.showTimes ? this.titles[2] : this.titles[1];
+      }
+    },
+    showCalendar(val) {
+      const bodyWidth = window.innerWidth;
+      if (val) {
+        if (bodyWidth > 710) this.$refs.modalbody.style.height = '410px';
+      }
+      else {
+        if (bodyWidth > 710) this.$refs.modalbody.style.height = 'auto';
       }
     }
   }
@@ -324,7 +335,7 @@ export default {
         }
       }
       .modal-body {
-        height: 410px;
+        // height: 410px;
 
         @media screen and (max-width: 710px) {
           height: auto;
