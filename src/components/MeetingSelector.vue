@@ -79,90 +79,117 @@ export default {
 
       this.availabilities.forEach(val => {
           if(!val.available || val.slots === 0) {
-            const dayNumber = moment().day(val.date).day();
-            disabled.push(dayNumber);
+            const dayNumber = moment().day(val.date).day()
+            disabled.push(dayNumber)
           }
-      });
+      })
 
-      this.disabledDates.days = disabled;
+      this.disabledDates.days = disabled
     },
     getTimeSlots(curDate) {
       try {
-        let duration = 20; //minutes
-        let bufferAfter = 10; //minutes
-        const availabilities = this.availabilities;
-        const appointments = this.appointments;
+        let duration = 20 //minutes
+        let bufferAfter = 10 //minutes
+        const availabilities = this.availabilities
+        const appointments = this.appointments
 
         if (this.services.length > 0 && this.seletedService !== '') {
-          const service = this.services.find(service => service.name === this.seletedService);
-          duration = service.duration;
-          bufferAfter = service.buffer;
+          const service = this.services.find(service => service.name === this.seletedService)
+          duration = service.duration
+          bufferAfter = service.buffer
         }
 
-        const spots = [];
-        const date = moment(curDate).format('YYYY-MM-DD');
-        const dow = moment(curDate).format('dddd').toLowerCase();
+        const spots = []
+        const date = moment(curDate).format('YYYY-MM-DD')
+        const dow = moment(curDate).format('dddd').toLowerCase()
         console.log('[dow]', dow)
 
         const availability = availabilities.find(item => item.date === dow)
-        console.log('[availability]', availability)
 
         if (availability.available && availability.slots > 0) {
-          for(let i = 0; i < availability.intervals.length; i++) {
-            const startTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from);
-            const endTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].to);
-            const totalDuration = moment.duration(endTime.diff(startTime)).asMinutes();
-            const timeForSpot = duration + bufferAfter;
-            const numberOfAvailableSpots = parseInt(totalDuration / timeForSpot);
-            const cursorDayAppointments = [];
+          const intervals = availability.intervals.map(interval => {
+            return {
+              ...interval,
+              slot: availability.slots
+            }
+          })
+          const cursorDayAppointments = []
 
-            appointments.forEach((val) => {
-              const service = this.services.find(service => service.name === val.seletedService)
-              const appointmentDate = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('YYYY-MM-DD');
-              const appointmentTime = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('HH:mm');
-              if(date === appointmentDate) {
-                cursorDayAppointments.push({
-                  time: appointmentTime,
-                  qty: 1,
-                  duration: parseInt(service.duration) + parseInt(service.buffer) 
-                });
-              }
-            });
+          appointments.forEach((val) => {
+            const service = this.services.find(service => service.name === val.seletedService)
+            const appointmentDate = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('YYYY-MM-DD')
+            const appointmentTime = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('HH:mm')
+            if (date === appointmentDate) {
+              cursorDayAppointments.push({
+                time: appointmentTime,
+                qty: 1,
+                duration: parseInt(service.duration) + parseInt(service.buffer) 
+              })
+            }
+          })
 
-            let index = 0;
+          console.log('[cursorDayAppointments]', intervals, cursorDayAppointments)
+          
+          for(let i = 0; i < intervals.length; i++) {
+            let startTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + intervals[i].from, 'YYYY-MM-DD HH:mm')
+            const endTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + intervals[i].to, 'YYYY-MM-DD HH:mm')
+
+            while(startTime.unix() < endTime.unix()) {
+              let slots = parseInt(availability.slots)
+              cursorDayAppointments.forEach((val) => {
+                const fromObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD HH:mm')
+                const fromTimestamp = fromObj.unix()
+                const toObj = fromObj.add(val.duration, 'minutes')
+                const toTimestamp = toObj.unix()
+                
+                if (startTime.unix() >= fromTimestamp && startTime.unix() < toTimestamp) {
+                  slots = slots - parseInt(val.qty)
+                }
+              });
+              if (slots == 0) startTime = startTime.add(5, 'minutes')
+              else break
+            }
+            const startTimeStr = startTime.format('HH:mm')
+            console.log('[startTime]', startTimeStr, endTime.format('HH:mm'))
+
+            const totalDuration = moment.duration(endTime.diff(startTime)).asMinutes()
+            const timeForSpot = duration + bufferAfter
+            const numberOfAvailableSpots = parseInt(totalDuration / timeForSpot)
+            console.log('[numberOfAvailableSpots]', totalDuration, timeForSpot, numberOfAvailableSpots)
+
+            let index = 0
             while(index < numberOfAvailableSpots) {
-                const newStartTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from)
-                                    .add( timeForSpot * index, 'minutes' );
-                const newStartTime = newStartTimeObj.format('HH:mm');
-                const newStartTimesStamp = newStartTimeObj.unix();
-                const newEndTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from)
-                                    .add( (timeForSpot * index + duration), 'minutes' );
-                const newEndTime = newEndTimeObj.format('HH:mm');
+                const newStartTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + startTimeStr, 'YYYY-MM-DD HH:mm').add(timeForSpot * index, 'minutes')
+                const newStartTime = newStartTimeObj.format('HH:mm')
+                const newStartTimesStamp = newStartTimeObj.unix()
+                const newEndTimeObj = newStartTimeObj.add(duration, 'minutes')
+                const newEndTime = newEndTimeObj.format('HH:mm')
+                const newEndTimesStamp = newEndTimeObj.unix()
+                console.log('[while]', index, timeForSpot, newStartTime, newEndTime)
 
-                let slots = parseInt(availability.slots);
+                let slots = parseInt(availability.slots)
 
                 cursorDayAppointments.forEach((val) => {
-                  const startTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD HH:mm');
-                  const startTimeStamp = startTimeObj.unix();
-                  const endTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD HH:mm')
-                                    .add( val.duration, 'minutes' );
-                  const endTimeStamp = endTimeObj.unix();
+                  const fromObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD HH:mm')
+                  const fromTimestamp = fromObj.unix()
+                  const toObj = fromObj.add(val.duration, 'minutes')
+                  const toTimestamp = toObj.unix()
                   
-                  if(newStartTimesStamp >= startTimeStamp && newStartTimesStamp < endTimeStamp) {
-                    console.log('[BBBB]', val.time, newStartTime);
-                    slots = slots - parseInt(val.qty);
+                  if((newStartTimesStamp >= fromTimestamp && newStartTimesStamp < toTimestamp) || (newEndTimesStamp >= fromTimestamp && newEndTimesStamp < toTimestamp)) {
+                    console.log('[BBBB]', val.time, newStartTime)
+                    slots = slots - parseInt(val.qty)
                   }
                 });
 
                 if(moment(new Date()).format('YYYY-MM-DD') == date) {
-                    const ukNow = moment(momentTimezone.tz('Europe/Paris').format('YYYY-MM-DD HH:mm'), 'YYYY-MM-DD HH:mm');
-                    const diff = moment.duration(newStartTimeObj.diff(ukNow));
+                    const ukNow = moment(momentTimezone.tz('Europe/Paris').format('YYYY-MM-DD HH:mm'), 'YYYY-MM-DD HH:mm')
+                    const diff = moment.duration(newStartTimeObj.diff(ukNow))
 
-                    console.log('[diff]', diff.asHours(), newStartTimeObj.format('HH:mm'), ukNow.format('HH:mm'));
+                    console.log('[diff]', diff.asHours(), newStartTimeObj.format('HH:mm'), ukNow.format('HH:mm'))
 
                     if (diff.asHours() < 1) {
-                        index++;
-                        continue;
+                        index++
+                        continue
                     }
                 }
                 
@@ -171,18 +198,18 @@ export default {
                     start_time: newStartTime,
                     end_time: newEndTime,
                     slots: slots
-                  });
+                  })
                 }
 
-                index++;
+                index++
             }
           }
         }
 
-        this.times = spots;
+        this.times = spots
 
         console.log('[times]', spots)
-        this.showTimes = true;
+        this.showTimes = true
       }
       catch (err) {
         console.log('[err]', err)
