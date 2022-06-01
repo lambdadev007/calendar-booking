@@ -14,6 +14,7 @@
     </div>
     <div class="times" v-if="showTimes">
       <div class="times-wrapper">
+        <div class="no-times" v-if="times.length === 0">Sorry, there is no time available on this date.</div>
         <div
           v-for="(time, index) in times"
           :key="index"
@@ -87,101 +88,106 @@ export default {
       this.disabledDates.days = disabled;
     },
     getTimeSlots(curDate) {
-      let duration = 20; //minutes
-      let bufferAfter = 10; //minutes
-      const availabilities = this.availabilities;
-      const appointments = this.appointments;
+      try {
+        let duration = 20; //minutes
+        let bufferAfter = 10; //minutes
+        const availabilities = this.availabilities;
+        const appointments = this.appointments;
 
-      if (this.services.length > 0 && this.seletedService !== '') {
-        const service = this.services.find(service => service.name === this.seletedService);
-        duration = service.duration;
-        bufferAfter = service.buffer;
-      }
+        if (this.services.length > 0 && this.seletedService !== '') {
+          const service = this.services.find(service => service.name === this.seletedService);
+          duration = service.duration;
+          bufferAfter = service.buffer;
+        }
 
-      const spots = [];
-      const date = moment(curDate).format('YYYY-MM-DD');
-      const dow = moment(curDate).format('dddd').toLowerCase();
-      console.log('[dow]', dow)
+        const spots = [];
+        const date = moment(curDate).format('YYYY-MM-DD');
+        const dow = moment(curDate).format('dddd').toLowerCase();
+        console.log('[dow]', dow)
 
-      const availability = availabilities.find(item => item.date === dow)
-      console.log('[availability]', availability)
+        const availability = availabilities.find(item => item.date === dow)
+        console.log('[availability]', availability)
 
-      if (availability.available && availability.slots > 0) {
-        for(let i = 0; i < availability.intervals.length; i++) {
-          const startTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from);
-          const endTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].to);
-          const totalDuration = moment.duration(endTime.diff(startTime)).asMinutes();
-          const timeForSpot = duration + bufferAfter;
-          const numberOfAvailableSpots = parseInt(totalDuration / timeForSpot);
-          const cursorDayAppointments = [];
+        if (availability.available && availability.slots > 0) {
+          for(let i = 0; i < availability.intervals.length; i++) {
+            const startTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from);
+            const endTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].to);
+            const totalDuration = moment.duration(endTime.diff(startTime)).asMinutes();
+            const timeForSpot = duration + bufferAfter;
+            const numberOfAvailableSpots = parseInt(totalDuration / timeForSpot);
+            const cursorDayAppointments = [];
 
-          appointments.forEach((val) => {
-            const service = this.services.find(service => service.name === val.seletedService)
-            const appointmentDate = moment(val.date_time, 'YYYY-MM-DD hh:mmA').format('YYYY-MM-DD');
-            const appointmentTime = moment(val.date_time, 'YYYY-MM-DD hh:mmA').format('hh:mmA');
-            if(date === appointmentDate) {
-              cursorDayAppointments.push({
-                time: appointmentTime,
-                qty: 1,
-                duration: parseInt(service.duration) + parseInt(service.buffer) 
-              });
-            }
-          });
-
-          let index = 0;
-          while(index < numberOfAvailableSpots) {
-              const newStartTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from)
-                                  .add( timeForSpot * index, 'minutes' );
-              const newStartTime = newStartTimeObj.format('hh:mmA');
-              const newStartTimesStamp = newStartTimeObj.unix();
-              const newEndTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from)
-                                  .add( (timeForSpot * index + duration), 'minutes' );
-              const newEndTime = newEndTimeObj.format('hh:mmA');
-
-              let slots = parseInt(availability.slots);
-
-              cursorDayAppointments.forEach((val) => {
-                const startTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD hh:mmA');
-                const startTimeStamp = startTimeObj.unix();
-                const endTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD hh:mmA')
-                                  .add( val.duration, 'minutes' );
-                const endTimeStamp = endTimeObj.unix();
-                
-                if(newStartTimesStamp >= startTimeStamp && newStartTimesStamp < endTimeStamp) {
-                  console.log('[BBBB]', val.time, newStartTime);
-                  slots = slots - parseInt(val.qty);
-                }
-              });
-
-              if(moment(new Date()).format('YYYY-MM-DD') == date) {
-                  const ukNow = moment(momentTimezone.tz('Europe/Paris').format('YYYY-MM-DD hh:mmA'), 'YYYY-MM-DD hh:mmA');
-                  const diff = moment.duration(newStartTimeObj.diff(ukNow));
-
-                  console.log('[diff]', diff.asHours(), newStartTimeObj.format('hh:mmA'), ukNow.format('hh:mmA'));
-
-                  if (diff.asHours() < 1) {
-                      index++;
-                      continue;
-                  }
-              }
-              
-              if (slots > 0) {
-                spots.push({
-                  start_time: newStartTime,
-                  end_time: newEndTime,
-                  slots: slots
+            appointments.forEach((val) => {
+              const service = this.services.find(service => service.name === val.seletedService)
+              const appointmentDate = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('YYYY-MM-DD');
+              const appointmentTime = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('HH:mm');
+              if(date === appointmentDate) {
+                cursorDayAppointments.push({
+                  time: appointmentTime,
+                  qty: 1,
+                  duration: parseInt(service.duration) + parseInt(service.buffer) 
                 });
               }
+            });
 
-              index++;
+            let index = 0;
+            while(index < numberOfAvailableSpots) {
+                const newStartTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from)
+                                    .add( timeForSpot * index, 'minutes' );
+                const newStartTime = newStartTimeObj.format('HH:mm');
+                const newStartTimesStamp = newStartTimeObj.unix();
+                const newEndTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + availability.intervals[i].from)
+                                    .add( (timeForSpot * index + duration), 'minutes' );
+                const newEndTime = newEndTimeObj.format('HH:mm');
+
+                let slots = parseInt(availability.slots);
+
+                cursorDayAppointments.forEach((val) => {
+                  const startTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD HH:mm');
+                  const startTimeStamp = startTimeObj.unix();
+                  const endTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD HH:mm')
+                                    .add( val.duration, 'minutes' );
+                  const endTimeStamp = endTimeObj.unix();
+                  
+                  if(newStartTimesStamp >= startTimeStamp && newStartTimesStamp < endTimeStamp) {
+                    console.log('[BBBB]', val.time, newStartTime);
+                    slots = slots - parseInt(val.qty);
+                  }
+                });
+
+                if(moment(new Date()).format('YYYY-MM-DD') == date) {
+                    const ukNow = moment(momentTimezone.tz('Europe/Paris').format('YYYY-MM-DD HH:mm'), 'YYYY-MM-DD HH:mm');
+                    const diff = moment.duration(newStartTimeObj.diff(ukNow));
+
+                    console.log('[diff]', diff.asHours(), newStartTimeObj.format('HH:mm'), ukNow.format('HH:mm'));
+
+                    if (diff.asHours() < 1) {
+                        index++;
+                        continue;
+                    }
+                }
+                
+                if (slots > 0) {
+                  spots.push({
+                    start_time: newStartTime,
+                    end_time: newEndTime,
+                    slots: slots
+                  });
+                }
+
+                index++;
+            }
           }
         }
+
+        this.times = spots;
+
+        console.log('[times]', spots)
+        this.showTimes = true;
       }
-
-      this.times = spots;
-
-      console.log('[times]', spots)
-      this.showTimes = true;
+      catch (err) {
+        console.log('[err]', err)
+      }
     }
   },
   mounted() {
@@ -261,6 +267,13 @@ export default {
 .meeting-selector .vdp-datepicker__calendar .cell.day.selected:hover {
   background-color: #1e1e1e;
   color: #fff;
+}
+.meeting-selector .cell.month.selected {
+  background-color: #1e1e1e;
+  color: #fff;
+}
+.meeting-selector .vdp-datepicker__calendar .cell:not(.blank):not(.disabled).day:hover, .vdp-datepicker__calendar .cell:not(.blank):not(.disabled).month:hover, .vdp-datepicker__calendar .cell:not(.blank):not(.disabled).year:hover {
+  border-color: #1e1e1e !important;
 }
 </style>
 <style lang="scss" scoped>
