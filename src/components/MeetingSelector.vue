@@ -161,6 +161,7 @@ export default {
         }
       }
 
+      console.log('[newIntervals - 1]', newIntervals)
       newIntervals = newIntervals.filter(interval => {
         const from = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.from, 'YYYY-MM-DD HH:mm')
         const to = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.to, 'YYYY-MM-DD HH:mm')
@@ -177,11 +178,18 @@ export default {
           const franceTimeAfterBuffer = moment(momentTimezone.tz('Europe/Paris').format('YYYY-MM-DD HH:mm'), 'YYYY-MM-DD HH:mm').add(_bufferForSamedayBooking, 'minutes')
           const from = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.from, 'YYYY-MM-DD HH:mm')
           const to = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.to, 'YYYY-MM-DD HH:mm')
+          console.log('[AAA]', franceTimeAfterBuffer.format('HH:mm'), from.format('HH:mm'))
 
           if (franceTimeAfterBuffer.unix() >= from.unix() && to.unix() > franceTimeAfterBuffer.unix()) {
             return {
               ...interval,
               from: franceTimeAfterBuffer.format('HH:mm'),
+              filterable: true
+            }
+          }
+          else if (franceTimeAfterBuffer.unix() < from.unix() && to.unix() > franceTimeAfterBuffer.unix()) {
+            return {
+              ...interval,
               filterable: true
             }
           }
@@ -199,6 +207,7 @@ export default {
           }
         }
       }).filter(interval => interval.filterable)
+      console.log('[newIntervals - 2]', newIntervals)
 
       return newIntervals
     },
@@ -260,16 +269,6 @@ export default {
                   slots = slots - parseInt(val.qty)
                 }
               });
-
-              if(moment(new Date()).format('YYYY-MM-DD') == date) {
-                const franceNow = moment(momentTimezone.tz('Europe/Paris').format('YYYY-MM-DD HH:mm'), 'YYYY-MM-DD HH:mm')
-                const diff = moment.duration(newStartTimeObj.diff(franceNow))
-
-                if (diff.asMinutes() < bufferTimeForSameDayBooking) {
-                  index++
-                  continue
-                }
-              }
               
               if (slots > 0) {
                 spots.push({
