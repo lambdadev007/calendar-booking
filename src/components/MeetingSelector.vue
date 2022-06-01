@@ -86,10 +86,105 @@ export default {
 
       this.disabledDates.days = disabled
     },
-    getTimeSlots(curDate) {
+    getCurrentDayAppointments(_appointments, _date) {
+      const cursorDayAppointments = []
+
+      _appointments.forEach((val) => {
+        const service = this.services.find(service => service.name === val.seletedService)
+        const appointmentDate = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('YYYY-MM-DD')
+        const appointmentTime = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('HH:mm')
+        if (_date === appointmentDate) {
+          cursorDayAppointments.push({
+            time: appointmentTime,
+            qty: 1,
+            duration: parseInt(service.duration) + parseInt(service.buffer) 
+          })
+        }
+      })
+
+      return cursorDayAppointments
+    },
+    updateIntervals(_intervals, _appointments, _slots) {
+      let newIntervals = []
+      console.log('[_intervals]', _intervals)
+      console.log('[_appointments]', _appointments)
+
+      for(let i = 0; i < _intervals.length; i++) {
+        let startTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + _intervals[i].from, 'YYYY-MM-DD HH:mm')
+        let endTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + _intervals[i].to, 'YYYY-MM-DD HH:mm')
+        let flag1 = false
+        let flag2 = false
+
+        while(startTime.unix() < endTime.unix()) {
+          let newStartTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + _intervals[i].from, 'YYYY-MM-DD HH:mm')
+          let newEndTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + _intervals[i].to, 'YYYY-MM-DD HH:mm')
+
+          let slots = parseInt(_slots)
+          _appointments.forEach((val) => {
+            const fromObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD HH:mm')
+            const fromTimestamp = fromObj.unix()
+            const toObj = fromObj.add(val.duration, 'minutes')
+            const toTimestamp = toObj.unix()
+            
+            if (startTime.unix() >= fromTimestamp && startTime.unix() < toTimestamp) {
+              slots = slots - parseInt(val.qty)
+            }
+          })
+
+          if (slots == 0) {
+            if (!flag1) {
+              newEndTime = startTime
+              newIntervals.push({
+                id: i,
+                from: newStartTime.format('HH:mm'),
+                to: newEndTime.format('HH:mm'),
+                updated: true
+              })
+              flag1 = true
+            }
+            startTime = startTime.add(5, 'minutes')
+            flag2 = false
+          }
+          else {
+            if (!flag2) {
+              newStartTime = startTime
+              let updated = false
+              if (flag1) updated = true
+              newIntervals.push({
+                id: i,
+                from: newStartTime.format('HH:mm'),
+                to: newEndTime.format('HH:mm'),
+                updated: updated
+              })
+              flag2 = true
+            }
+            startTime = startTime.add(5, 'minutes')
+            flag1 = false
+          }
+        }
+      }
+      console.log('[newIntervals - 1]', newIntervals)
+      newIntervals = newIntervals.filter(interval => {
+        const from = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.from, 'YYYY-MM-DD HH:mm')
+        const to = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.to, 'YYYY-MM-DD HH:mm')
+        return to.diff(from) > 0
+      }).filter(interval => {
+        if (!interval.updated) {
+          const isSameIdwithTrueExist = newIntervals.find(item => (item.id === interval.id && item.updated))
+          if (isSameIdwithTrueExist) return false
+        }
+
+        return true
+      })
+      console.log('[newIntervals - 2]', newIntervals)
+
+      return newIntervals
+    },
+    getTimeSlots(_curDate) {
       try {
         let duration = 20 //minutes
         let bufferAfter = 10 //minutes
+        let bufferTimeForSameDayBooking = 60 // minutes
         const availabilities = this.availabilities
         const appointments = this.appointments
 
@@ -97,118 +192,77 @@ export default {
           const service = this.services.find(service => service.name === this.seletedService)
           duration = service.duration
           bufferAfter = service.buffer
+          bufferTimeForSameDayBooking = service.bufferTimeForSameDayBooking
         }
 
         const spots = []
-        const date = moment(curDate).format('YYYY-MM-DD')
-        const dow = moment(curDate).format('dddd').toLowerCase()
-        console.log('[dow]', dow)
+        const date = moment(_curDate).format('YYYY-MM-DD')
+        const dow = moment(_curDate).format('dddd').toLowerCase()
 
         const availability = availabilities.find(item => item.date === dow)
 
         if (availability.available && availability.slots > 0) {
-          const intervals = availability.intervals.map(interval => {
-            return {
-              ...interval,
-              slot: availability.slots
-            }
-          })
-          const cursorDayAppointments = []
+          const cursorDayAppointments = this.getCurrentDayAppointments(appointments, date)
 
-          appointments.forEach((val) => {
-            const service = this.services.find(service => service.name === val.seletedService)
-            const appointmentDate = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('YYYY-MM-DD')
-            const appointmentTime = moment(val.date_time, 'YYYY-MM-DD HH:mm').format('HH:mm')
-            if (date === appointmentDate) {
-              cursorDayAppointments.push({
-                time: appointmentTime,
-                qty: 1,
-                duration: parseInt(service.duration) + parseInt(service.buffer) 
-              })
-            }
-          })
-
-          console.log('[cursorDayAppointments]', intervals, cursorDayAppointments)
+          const intervals = this.updateIntervals(availability.intervals, cursorDayAppointments, availability.slots)
           
           for(let i = 0; i < intervals.length; i++) {
-            let startTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + intervals[i].from, 'YYYY-MM-DD HH:mm')
+            const startTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + intervals[i].from, 'YYYY-MM-DD HH:mm')
             const endTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + intervals[i].to, 'YYYY-MM-DD HH:mm')
 
-            while(startTime.unix() < endTime.unix()) {
+            const startTimeStr = startTime.format('HH:mm')
+
+            const totalDuration = moment.duration(endTime.diff(startTime)).asMinutes()
+            const timeForSpot = duration + bufferAfter
+            let numberOfAvailableSpots = parseInt(totalDuration / timeForSpot)
+            if (totalDuration % timeForSpot === duration) numberOfAvailableSpots++
+
+            let index = 0
+            while(index < numberOfAvailableSpots) {
+              const newStartTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + startTimeStr, 'YYYY-MM-DD HH:mm').add(timeForSpot * index, 'minutes')
+              const newStartTime = newStartTimeObj.format('HH:mm')
+              const newStartTimesStamp = newStartTimeObj.unix()
+              const newEndTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + startTimeStr, 'YYYY-MM-DD HH:mm').add(timeForSpot * index + duration, 'minutes')
+              const newEndTime = newEndTimeObj.format('HH:mm')
+              const newEndTimesStamp = newEndTimeObj.unix()
+
               let slots = parseInt(availability.slots)
+
               cursorDayAppointments.forEach((val) => {
                 const fromObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD HH:mm')
                 const fromTimestamp = fromObj.unix()
                 const toObj = fromObj.add(val.duration, 'minutes')
                 const toTimestamp = toObj.unix()
                 
-                if (startTime.unix() >= fromTimestamp && startTime.unix() < toTimestamp) {
+                if((newStartTimesStamp >= fromTimestamp && newStartTimesStamp < toTimestamp) || (newEndTimesStamp >= fromTimestamp && newEndTimesStamp < toTimestamp)) {
                   slots = slots - parseInt(val.qty)
                 }
               });
-              if (slots == 0) startTime = startTime.add(5, 'minutes')
-              else break
-            }
-            const startTimeStr = startTime.format('HH:mm')
-            console.log('[startTime]', startTimeStr, endTime.format('HH:mm'))
 
-            const totalDuration = moment.duration(endTime.diff(startTime)).asMinutes()
-            const timeForSpot = duration + bufferAfter
-            const numberOfAvailableSpots = parseInt(totalDuration / timeForSpot)
-            console.log('[numberOfAvailableSpots]', totalDuration, timeForSpot, numberOfAvailableSpots)
+              if(moment(new Date()).format('YYYY-MM-DD') == date) {
+                const franceNow = moment(momentTimezone.tz('Europe/Paris').format('YYYY-MM-DD HH:mm'), 'YYYY-MM-DD HH:mm')
+                const diff = moment.duration(newStartTimeObj.diff(franceNow))
 
-            let index = 0
-            while(index < numberOfAvailableSpots) {
-                const newStartTimeObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + startTimeStr, 'YYYY-MM-DD HH:mm').add(timeForSpot * index, 'minutes')
-                const newStartTime = newStartTimeObj.format('HH:mm')
-                const newStartTimesStamp = newStartTimeObj.unix()
-                const newEndTimeObj = newStartTimeObj.add(duration, 'minutes')
-                const newEndTime = newEndTimeObj.format('HH:mm')
-                const newEndTimesStamp = newEndTimeObj.unix()
-                console.log('[while]', index, timeForSpot, newStartTime, newEndTime)
-
-                let slots = parseInt(availability.slots)
-
-                cursorDayAppointments.forEach((val) => {
-                  const fromObj = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + val.time, 'YYYY-MM-DD HH:mm')
-                  const fromTimestamp = fromObj.unix()
-                  const toObj = fromObj.add(val.duration, 'minutes')
-                  const toTimestamp = toObj.unix()
-                  
-                  if((newStartTimesStamp >= fromTimestamp && newStartTimesStamp < toTimestamp) || (newEndTimesStamp >= fromTimestamp && newEndTimesStamp < toTimestamp)) {
-                    console.log('[BBBB]', val.time, newStartTime)
-                    slots = slots - parseInt(val.qty)
-                  }
-                });
-
-                if(moment(new Date()).format('YYYY-MM-DD') == date) {
-                    const ukNow = moment(momentTimezone.tz('Europe/Paris').format('YYYY-MM-DD HH:mm'), 'YYYY-MM-DD HH:mm')
-                    const diff = moment.duration(newStartTimeObj.diff(ukNow))
-
-                    console.log('[diff]', diff.asHours(), newStartTimeObj.format('HH:mm'), ukNow.format('HH:mm'))
-
-                    if (diff.asHours() < 1) {
-                        index++
-                        continue
-                    }
+                if (diff.asMinutes() < bufferTimeForSameDayBooking) {
+                  index++
+                  continue
                 }
-                
-                if (slots > 0) {
-                  spots.push({
-                    start_time: newStartTime,
-                    end_time: newEndTime,
-                    slots: slots
-                  })
-                }
+              }
+              
+              if (slots > 0) {
+                spots.push({
+                  start_time: newStartTime,
+                  end_time: newEndTime,
+                  slots: slots
+                })
+              }
 
-                index++
+              index++
             }
           }
         }
 
         this.times = spots
-
-        console.log('[times]', spots)
         this.showTimes = true
       }
       catch (err) {
