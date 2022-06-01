@@ -71,7 +71,6 @@ export default {
     },
     onTimeConfirm() {
       const dateTime = `${moment(this.date).format('YYYY-MM-DD')} ${this.selectedTime}`
-      console.log('[dateTime]', dateTime)
       this.$emit("select-date-time", dateTime);
     },
     getDisabledDates() {
@@ -106,8 +105,6 @@ export default {
     },
     updateIntervals(_intervals, _appointments, _slots) {
       let newIntervals = []
-      console.log('[_intervals]', _intervals)
-      console.log('[_appointments]', _appointments)
 
       for(let i = 0; i < _intervals.length; i++) {
         let startTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + _intervals[i].from, 'YYYY-MM-DD HH:mm')
@@ -163,7 +160,7 @@ export default {
           }
         }
       }
-      console.log('[newIntervals - 1]', newIntervals)
+
       newIntervals = newIntervals.filter(interval => {
         const from = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.from, 'YYYY-MM-DD HH:mm')
         const to = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.to, 'YYYY-MM-DD HH:mm')
@@ -176,7 +173,6 @@ export default {
 
         return true
       })
-      console.log('[newIntervals - 2]', newIntervals)
 
       return newIntervals
     },
@@ -284,7 +280,6 @@ export default {
   },
   watch: {
     date(date) {
-      console.log('[date]', date.toISOString())
       this.$emit("select-date", date);
       this.getTimeSlots(date)
     },
@@ -292,7 +287,6 @@ export default {
       this.showTimes = val;
     },
     availabilities(availabilities) {
-      console.log('[availabilitiestttt]', availabilities)
       if (availabilities.length > 0) {
         this.getDisabledDates()
         this.loading = false
@@ -348,7 +342,7 @@ export default {
   background-color: #1e1e1e;
   color: #fff;
 }
-.meeting-selector .cell.month.selected {
+.meeting-selector .cell.month.selected, .meeting-selector .cell.year.selected {
   background-color: #1e1e1e;
   color: #fff;
 }

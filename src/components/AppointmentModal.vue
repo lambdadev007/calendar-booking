@@ -126,14 +126,12 @@ export default {
         appointmentsData.push(availability.data());
       })
       this.appointments = appointmentsData;
-      console.log('[appointments]', appointmentsData);
 
       const availabilitiesData = [];
       availabilitiesDataTemp.forEach((availability) => {
         availabilitiesData.push(availability.data());
       })
       this.availabilities = availabilitiesData;
-      console.log('[availabilities]', availabilitiesData);
     },
     onSelectDate(date) {
       if (date) {
