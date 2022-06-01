@@ -103,7 +103,7 @@ export default {
 
       return cursorDayAppointments
     },
-    updateIntervals(_intervals, _appointments, _slots) {
+    updateIntervals(_intervals, _appointments, _slots, _date, _bufferForSamedayBooking) {
       let newIntervals = []
 
       for(let i = 0; i < _intervals.length; i++) {
@@ -172,7 +172,33 @@ export default {
         }
 
         return true
-      })
+      }).map(interval => {
+        if(moment(new Date()).format('YYYY-MM-DD') == _date) {
+          const franceTimeAfterBuffer = moment(momentTimezone.tz('Europe/Paris').format('YYYY-MM-DD HH:mm'), 'YYYY-MM-DD HH:mm').add(_bufferForSamedayBooking, 'minutes')
+          const from = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.from, 'YYYY-MM-DD HH:mm')
+          const to = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + interval.to, 'YYYY-MM-DD HH:mm')
+
+          if (franceTimeAfterBuffer.unix() >= from.unix() && to.unix() > franceTimeAfterBuffer.unix()) {
+            return {
+              ...interval,
+              from: franceTimeAfterBuffer.format('HH:mm'),
+              filterable: true
+            }
+          }
+          else {
+            return {
+              ...interval,
+              filterable: false
+            }
+          }
+        }
+        else {
+          return {
+            ...interval,
+            filterable: true
+          }
+        }
+      }).filter(interval => interval.filterable)
 
       return newIntervals
     },
@@ -200,7 +226,7 @@ export default {
         if (availability.available && availability.slots > 0) {
           const cursorDayAppointments = this.getCurrentDayAppointments(appointments, date)
 
-          const intervals = this.updateIntervals(availability.intervals, cursorDayAppointments, availability.slots)
+          const intervals = this.updateIntervals(availability.intervals, cursorDayAppointments, availability.slots, date, bufferTimeForSameDayBooking)
           
           for(let i = 0; i < intervals.length; i++) {
             const startTime = moment(moment(new Date()).format('YYYY-MM-DD') + ' ' + intervals[i].from, 'YYYY-MM-DD HH:mm')
