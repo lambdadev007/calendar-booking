@@ -136,7 +136,6 @@ export default {
       console.log('[availabilities]', availabilitiesData);
     },
     onSelectDate(date) {
-      console.log(this.$refs.modal)
       if (date) {
         this.showTimes = true;
       }

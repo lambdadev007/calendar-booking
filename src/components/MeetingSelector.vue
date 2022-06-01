@@ -70,9 +70,8 @@ export default {
       this.selectedTime = time.start_time;
     },
     onTimeConfirm() {
-      const dateTime = `${this.date.toISOString().split("T")[0]} ${
-        this.selectedTime
-      }`;
+      const dateTime = `${moment(this.date).format('YYYY-MM-DD')} ${this.selectedTime}`
+      console.log('[dateTime]', dateTime)
       this.$emit("select-date-time", dateTime);
     },
     getDisabledDates() {
@@ -204,7 +203,7 @@ export default {
   },
   watch: {
     date(date) {
-      console.log(date)
+      console.log('[date]', date.toISOString())
       this.$emit("select-date", date);
       this.getTimeSlots(date)
     },
@@ -272,7 +271,7 @@ export default {
   background-color: #1e1e1e;
   color: #fff;
 }
-.meeting-selector .vdp-datepicker__calendar .cell:not(.blank):not(.disabled).day:hover, .vdp-datepicker__calendar .cell:not(.blank):not(.disabled).month:hover, .vdp-datepicker__calendar .cell:not(.blank):not(.disabled).year:hover {
+.meeting-selector .vdp-datepicker__calendar .cell:not(.blank):not(.disabled).month:hover, .vdp-datepicker__calendar .cell:not(.blank):not(.disabled).year:hover {
   border-color: #1e1e1e !important;
 }
 </style>
