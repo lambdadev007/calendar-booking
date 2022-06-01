@@ -85,7 +85,6 @@ export default {
             this.$emit('set-values', payload)
         },
         seletedService(val) {
-            console.log('[seletedService]', val)
             const payload = {
                 type: 'seletedService',
                 value: val
